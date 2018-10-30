@@ -7,13 +7,13 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryTableViewController: UITableViewController {
 
-    var categoryArray = [Category]()
+    let realm = try! Realm()
     
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    var categories: Results<Category>?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -24,7 +24,7 @@ class CategoryTableViewController: UITableViewController {
     //MARK: - table view datasource method
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
-        return categoryArray.count
+        return categories?.count ?? 1
         
     }
     
@@ -32,9 +32,9 @@ class CategoryTableViewController: UITableViewController {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
         
-        let category = categoryArray[indexPath.row]
+        //let category = categories?[indexPath.row]
 
-        cell.textLabel?.text = category.name
+        cell.textLabel?.text = categories?[indexPath.row].name ?? "No categories added yet"
         
         return cell
     }
@@ -50,25 +50,29 @@ class CategoryTableViewController: UITableViewController {
         let destinationVC = segue.destination as! TodoListViewController
         
         if let indexPath = tableView.indexPathForSelectedRow{
-            destinationVC.selectedCategory = categoryArray[indexPath.row]
+            destinationVC.selectedCategory = categories?[indexPath.row]
         }
         
     }
     
     //MARK: - Data manipulation method
-    func loadCategory(with request: NSFetchRequest<Category> = Category.fetchRequest()){
+    func loadCategory(){
         
-        do{
-            categoryArray = try context.fetch(request)
-        }catch {
-            print("Error fetching data \(error)")
-        }
+        categories = realm.objects(Category.self)
+        
+//        do{
+//            categoryArray = try context.fetch(request)
+//        }catch {
+//            print("Error fetching data \(error)")
+//        }
     }
     
-    func saveItems(){
+    func save(category: Category){
         
         do{
-            try context.save()
+            try realm.write{
+                realm.add(category)
+            }
         }catch{
             print("Error saving context \(error)")
         }
@@ -86,11 +90,10 @@ class CategoryTableViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Category", style: .default) { (action) in
             
             
-            let newCategory = Category(context: self.context)
+            let newCategory = Category()
             newCategory.name = textField.text!
-            self.categoryArray.append(newCategory)
             
-            self.saveItems()
+            self.save(category: newCategory)
         }
         
         alert.addTextField { (alertTextField) in
